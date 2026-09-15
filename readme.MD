@@ -1,6 +1,6 @@
 # Credit Card Fraud Detection App
 
-An end-to-end fraud detection system: a trained ML model served via a FastAPI backend, with a simple web frontend for testing transactions live.
+An end-to-end fraud detection system: a trained ML model served via a FastAPI backend, with a React frontend for testing transactions live.
 
 ## Overview
 
@@ -16,7 +16,7 @@ Credit card fraud is extremely rare relative to legitimate transactions (~0.17% 
 data/           raw dataset (not committed — see Setup)
 model/          training script + saved model artifacts (not committed)
 backend/        FastAPI app serving /predict
-frontend/       static HTML/JS client
+frontend/       React (Vite) app
 ```
 
 ## Model
@@ -34,10 +34,10 @@ Logistic Regression with `class_weight="balanced"` to counter the extreme class 
 ## Setup
 
 ```bash
+# Backend
 python -m venv venv
 source venv/Scripts/activate      # Windows Git Bash
 # source venv/bin/activate        # macOS/Linux
-
 pip install -r requirements.txt
 
 # Get the dataset (requires a Kaggle account + API token)
@@ -45,6 +45,10 @@ kaggle datasets download -d mlg-ulb/creditcardfraud -p data --unzip
 
 # Train the model
 python model/train.py
+
+# Frontend
+cd frontend
+npm install
 ```
 
 ## Running
@@ -56,10 +60,11 @@ Two terminals:
 uvicorn backend.main:app --reload --port 8000
 
 # Terminal 2 — frontend
-python -m http.server 5500 --directory frontend
+cd frontend
+npm run dev
 ```
 
-Open `http://localhost:5500`, paste a transaction as JSON, click "Check Transaction."
+Open `http://localhost:5173`, paste a transaction as JSON, click "Check Transaction."
 
 ## API
 
