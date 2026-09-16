@@ -290,3 +290,17 @@ th {
     grid-template-columns: 1fr;
   }
 }
+
+/* Force light native form controls regardless of OS dark mode */
+:root {
+  color-scheme: light;
+}
+
+.field input {
+  background: #fff;
+  color: #101828;
+}
+
+input[type="file"] {
+  color: #101828;
+}

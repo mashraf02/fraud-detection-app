@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import Papa from 'papaparse'
+import Landing from './Landing'
 import './App.css'
+
 
 const FIELD_NAMES = ['Time', 'Amount', ...Array.from({ length: 28 }, (_, i) => `V${i + 1}`)]
 
@@ -29,6 +31,7 @@ function VerdictBadge({ isFraud }) {
 }
 
 function App() {
+  const [showLanding, setShowLanding] = useState(true)
   const [tab, setTab] = useState('single')
   const [fields, setFields] = useState(DEFAULT_VALUES)
   const [result, setResult] = useState(null)
@@ -131,10 +134,14 @@ function App() {
     })
   }
 
+  if (showLanding) {
+    return <Landing onLaunch={() => setShowLanding(false)} />
+  }
+
   return (
     <div className="page">
       <header className="hero">
-        <h1>Fraud Radar</h1>
+         <h1>Fraud Radar</h1>
         <p>Credit card transaction fraud checker</p>
       </header>
 
