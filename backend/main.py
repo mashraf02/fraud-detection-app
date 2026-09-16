@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from typing import List
 import joblib
 import numpy as np
 
@@ -27,18 +28,36 @@ class Transaction(BaseModel):
     V21: float; V22: float; V23: float; V24: float; V25: float
     V26: float; V27: float; V28: float
 
+def _predict_one(tx: Transaction):
+    row = tx.dict()
+    row["Time"], row["Amount"] = scaler.transform([[row["Time"], row["Amount"]]])[0]
+    features = np.array([[row[col] for col in feature_order]])
+    proba = model.predict_proba(features)[0][1]
+    return {
+        "fraud_probability": round(float(proba), 4),
+        "is_fraud": bool(proba > 0.5),
+    }
+
 @app.get("/health")
 def health():
     return {"status": "ok"}
 
 @app.post("/predict")
 def predict(tx: Transaction):
-    row = tx.dict()
-    row["Time"], row["Amount"] = scaler.transform([[row["Time"], row["Amount"]]])[0]
-    features = np.array([[row[col] for col in feature_order]])
+    return _predict_one(tx)
 
-    proba = model.predict_proba(features)[0][1]
+@app.post("/predict/batch")
+def predict_batch(transactions: List[Transaction]):
+    results = []
+    for tx in transactions:
+        result = _predict_one(tx)
+        result["Time"] = tx.Time
+        result["Amount"] = tx.Amount
+        results.append(result)
+
+    fraud_count = sum(1 for r in results if r["is_fraud"])
     return {
-        "fraud_probability": round(float(proba), 4),
-        "is_fraud": bool(proba > 0.5),
+        "results": results,
+        "total": len(results),
+        "fraud_count": fraud_count,
     }
