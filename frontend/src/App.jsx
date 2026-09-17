@@ -261,6 +261,7 @@ function App() {
                 Your checked transactions will appear here.
               </div>
             ) : (
+              <div className="table-scroll">
               <table>
                 <thead>
                   <tr><th>Time checked</th><th>Amount</th><th>Verdict</th><th>Probability</th></tr>
@@ -276,6 +277,7 @@ function App() {
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
           </div>
         </section>
@@ -325,6 +327,7 @@ function App() {
               <div className="banner summary">
                 {batchResults.fraud_count} of {batchResults.total} transactions flagged as fraud
               </div>
+              <div className="table-scroll">
               <table>
                 <thead>
                   <tr><th>#</th><th>Amount</th><th>Verdict</th><th>Probability</th></tr>
@@ -340,6 +343,7 @@ function App() {
                   ))}
                 </tbody>
               </table>
+              </div>
             </>
           )}
         </section>

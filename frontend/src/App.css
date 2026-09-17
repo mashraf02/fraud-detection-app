@@ -542,3 +542,67 @@ input[type="file"] {
   border: 1px dashed #E4E7EC;
   border-radius: 12px;
 }
+
+/* Mobile responsiveness pass */
+
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 600px) {
+  .page {
+    padding: 0 12px 60px;
+  }
+
+  .dash-nav {
+    margin: 0 -12px;
+    padding: 0 4px;
+  }
+
+  .dash-brand {
+    font-size: 13px;
+    gap: 8px;
+  }
+
+  .dash-back-btn {
+    font-size: 12px;
+    padding: 6px 12px;
+  }
+
+  .hero {
+    margin: 0 -12px 20px;
+    padding: 32px 16px 28px;
+  }
+
+  .hero h1 {
+    font-size: 22px;
+  }
+
+  .card {
+    padding: 18px;
+  }
+
+  .field-grid-primary {
+    grid-template-columns: 1fr;
+    max-width: 100%;
+  }
+
+  .field-grid-technical {
+    grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+    padding: 12px;
+    gap: 8px;
+  }
+
+  table {
+    font-size: 12px;
+  }
+
+  th, td {
+    padding: 6px 8px;
+  }
+
+  .upload-zone {
+    padding: 24px 14px;
+  }
+}
