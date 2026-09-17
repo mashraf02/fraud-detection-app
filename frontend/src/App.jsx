@@ -5,6 +5,8 @@ import './App.css'
 
 
 const FIELD_NAMES = ['Time', 'Amount', ...Array.from({ length: 28 }, (_, i) => `V${i + 1}`)]
+const PRIMARY_FIELDS = ['Time', 'Amount']
+const TECHNICAL_FIELDS = FIELD_NAMES.filter((n) => !PRIMARY_FIELDS.includes(n))
 
 const DEFAULT_VALUES = {
   Time: 406, Amount: 0,
@@ -180,18 +182,39 @@ function App() {
       {tab === 'single' && (
         <section className="card card-brand">
           <h2>Check a transaction</h2>
-          <div className="field-grid">
-            {FIELD_NAMES.map((name) => (
-              <label key={name} className="field">
-                <span>{name}</span>
-                <input
-                  type="number"
-                  step="any"
-                  value={fields[name]}
-                  onChange={(e) => updateField(name, e.target.value)}
-                />
-              </label>
-            ))}
+          <div className="field-section">
+            <h3 className="field-section-title">Transaction details</h3>
+            <div className="field-grid field-grid-primary">
+              {PRIMARY_FIELDS.map((name) => (
+                <label key={name} className="field field-primary">
+                  <span>{name}</span>
+                  <input
+                    type="number"
+                    step="any"
+                    value={fields[name]}
+                    onChange={(e) => updateField(name, e.target.value)}
+                  />
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="field-section">
+            <h3 className="field-section-title">Technical features (V1&ndash;V28)</h3>
+            <p className="field-section-hint">Anonymized model inputs, pre-filled with a sample transaction.</p>
+            <div className="field-grid field-grid-technical">
+              {TECHNICAL_FIELDS.map((name) => (
+                <label key={name} className="field">
+                  <span>{name}</span>
+                  <input
+                    type="number"
+                    step="any"
+                    value={fields[name]}
+                    onChange={(e) => updateField(name, e.target.value)}
+                  />
+                </label>
+              ))}
+            </div>
           </div>
 
           <button className="primary-btn" onClick={checkSingle} disabled={loading}>
