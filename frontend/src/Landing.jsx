@@ -9,6 +9,11 @@ export default function Landing({ onLaunch }) {
           <span className="brand-glyph" />
           <span>Fraud Radar</span>
         </div>
+        <div className="nav-links">
+          <a href="#pipeline">How it works</a>
+          <a href="#results">Results</a>
+          <a href="#limits">Limitations</a>
+        </div>
         <div className="nav-right">
           <span className="nav-tag">Prototype</span>
           <a
@@ -19,6 +24,9 @@ export default function Landing({ onLaunch }) {
           >
             GitHub
           </a>
+          <button className="nav-cta" onClick={onLaunch}>
+            Open dashboard
+          </button>
         </div>
       </nav>
 
@@ -238,7 +246,7 @@ export default function Landing({ onLaunch }) {
         </div>
       </section>
 
-      <section className="section">
+      <section className="section" id="results">
         <div className="shell">
           <h2>Tuned to catch fraud, not to look clean.</h2>
           <p className="section-lede">
@@ -273,7 +281,7 @@ export default function Landing({ onLaunch }) {
         </div>
       </section>
 
-      <section className="section">
+      <section className="section" id="limits">
         <div className="shell">
           <h2>Where this stops being a prototype.</h2>
           <p className="section-lede">
@@ -350,15 +358,64 @@ export default function Landing({ onLaunch }) {
         </button>
       </section>
 
-      <footer className="landing-footer shell">
-        <span>Fraud Radar — a fraud screening prototype</span>
-        <a
-          href="https://github.com/mashraf02/fraud-detection-app"
-          target="_blank"
-          rel="noreferrer"
-        >
-          View source
-        </a>
+      <footer className="landing-footer">
+        <div className="shell footer-grid">
+          <div className="footer-brand">
+            <div className="nav-brand">
+              <span className="brand-glyph" />
+              <span>Fraud Radar</span>
+            </div>
+            <p>A fraud screening prototype built on a public benchmark dataset.</p>
+          </div>
+
+          <div className="footer-col">
+            <h4>Product</h4>
+            <a href="#pipeline">How it works</a>
+            <a href="#results">Results</a>
+            <a href="#limits">Limitations</a>
+          </div>
+
+          <div className="footer-col">
+            <h4>Resources</h4>
+            <a
+              href="https://github.com/mashraf02/fraud-detection-app"
+              target="_blank"
+              rel="noreferrer"
+            >
+              GitHub repository
+            </a>
+            <a
+              href="https://github.com/mashraf02/fraud-detection-app/blob/main/README.md"
+              target="_blank"
+              rel="noreferrer"
+            >
+              README
+            </a>
+            <a
+              href="https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Dataset
+            </a>
+          </div>
+
+          <div className="footer-col">
+            <h4>Built by</h4>
+            <a
+              href="https://github.com/mashraf02"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Mashraful
+            </a>
+            <span className="footer-note">CS undergraduate, IUB</span>
+          </div>
+        </div>
+
+        <div className="footer-bottom shell">
+          <span>Fraud Radar &mdash; internship prototype</span>
+        </div>
       </footer>
 
     </div>
