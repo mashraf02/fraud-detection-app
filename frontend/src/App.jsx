@@ -3,7 +3,6 @@ import Papa from 'papaparse'
 import Landing from './Landing'
 import './App.css'
 
-
 const FIELD_NAMES = ['Time', 'Amount', ...Array.from({ length: 28 }, (_, i) => `V${i + 1}`)]
 const PRIMARY_FIELDS = ['Time', 'Amount']
 const TECHNICAL_FIELDS = FIELD_NAMES.filter((n) => !PRIMARY_FIELDS.includes(n))
@@ -44,6 +43,7 @@ function App() {
   const [batchResults, setBatchResults] = useState(null)
   const [batchError, setBatchError] = useState(null)
   const [batchLoading, setBatchLoading] = useState(false)
+  const [fileName, setFileName] = useState(null)
 
   const sessionChecks = history.length + (batchResults ? batchResults.total : 0)
   const sessionFraud = history.filter((h) => h.is_fraud).length + (batchResults ? batchResults.fraud_count : 0)
@@ -93,10 +93,9 @@ function App() {
     }
   }
 
-  function handleCsvUpload(e) {
-    const file = e.target.files[0]
+  function processCsvFile(file) {
     if (!file) return
-
+    setFileName(file.name)
     setBatchError(null)
     setBatchResults(null)
     setBatchLoading(true)
@@ -134,6 +133,19 @@ function App() {
         setBatchLoading(false)
       },
     })
+  }
+
+  function handleFileInputChange(e) {
+    processCsvFile(e.target.files[0])
+  }
+
+  function handleDrop(e) {
+    e.preventDefault()
+    processCsvFile(e.dataTransfer.files[0])
+  }
+
+  function handleDragOver(e) {
+    e.preventDefault()
   }
 
   if (showLanding) {
@@ -182,6 +194,7 @@ function App() {
       {tab === 'single' && (
         <section className="card card-brand">
           <h2>Check a transaction</h2>
+
           <div className="field-section">
             <h3 className="field-section-title">Transaction details</h3>
             <div className="field-grid field-grid-primary">
@@ -259,7 +272,24 @@ function App() {
           <p className="hint">
             CSV must have columns: Time, Amount, V1–V28 (same format as the training dataset).
           </p>
-          <input type="file" accept=".csv" onChange={handleCsvUpload} />
+
+          <label
+            className="upload-zone"
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+          >
+            <input
+              type="file"
+              accept=".csv"
+              onChange={handleFileInputChange}
+              className="upload-zone-input"
+            />
+            <span className="upload-zone-icon">CSV</span>
+            <span className="upload-zone-text">
+              {fileName ? fileName : 'Click to upload or drag and drop'}
+            </span>
+            <span className="upload-zone-hint">CSV files only</span>
+          </label>
 
           {batchLoading && <div className="banner">Processing...</div>}
           {batchError && <div className="banner error">{batchError}</div>}
