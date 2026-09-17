@@ -31,6 +31,10 @@ function VerdictBadge({ isFraud }) {
   )
 }
 
+function Spinner() {
+  return <span className="spinner" aria-hidden="true" />
+}
+
 function App() {
   const [showLanding, setShowLanding] = useState(true)
   const [tab, setTab] = useState('single')
@@ -231,7 +235,14 @@ function App() {
           </div>
 
           <button className="primary-btn" onClick={checkSingle} disabled={loading}>
-            {loading ? 'Checking...' : 'Check Transaction'}
+            {loading ? (
+              <>
+                <Spinner />
+                Checking...
+              </>
+            ) : (
+              'Check Transaction'
+            )}
           </button>
 
           {error && <div className="banner error">{error}</div>}
@@ -243,9 +254,13 @@ function App() {
             </div>
           )}
 
-          {history.length > 0 && (
-            <div className="history">
-              <h3>History (this session)</h3>
+          <div className="history">
+            <h3>History (this session)</h3>
+            {history.length === 0 ? (
+              <div className="empty-state">
+                Your checked transactions will appear here.
+              </div>
+            ) : (
               <table>
                 <thead>
                   <tr><th>Time checked</th><th>Amount</th><th>Verdict</th><th>Probability</th></tr>
@@ -261,8 +276,8 @@ function App() {
                   ))}
                 </tbody>
               </table>
-            </div>
-          )}
+            )}
+          </div>
         </section>
       )}
 
@@ -291,8 +306,19 @@ function App() {
             <span className="upload-zone-hint">CSV files only</span>
           </label>
 
-          {batchLoading && <div className="banner">Processing...</div>}
+          {batchLoading && (
+            <div className="banner banner-loading">
+              <Spinner />
+              Processing...
+            </div>
+          )}
           {batchError && <div className="banner error">{batchError}</div>}
+
+          {!batchResults && !batchLoading && !batchError && (
+            <div className="empty-state">
+              Results will appear here after you upload a file.
+            </div>
+          )}
 
           {batchResults && (
             <>
