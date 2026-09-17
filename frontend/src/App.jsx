@@ -140,8 +140,16 @@ function App() {
 
   return (
     <div className="page">
+      <nav className="dash-nav">
+        <div className="dash-brand">
+          <span className="dash-brand-glyph" />
+          <span>Fraud Radar</span>
+        </div>
+        <button className="dash-back-btn" onClick={() => setShowLanding(true)}>Back to overview</button>
+      </nav>
+
       <header className="hero">
-         <h1>Fraud Radar</h1>
+        <h1>Live Fraud Check</h1>
         <p>Credit card transaction fraud checker</p>
       </header>
 

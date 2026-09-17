@@ -304,3 +304,71 @@ th {
 input[type="file"] {
   color: #101828;
 }
+
+/* Dashboard nav — visual consistency with the landing page */
+
+.dash-nav {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 64px;
+  padding: 0 4px;
+  margin: 0 -20px;
+  background: white;
+  border-bottom: 1px solid #E4E7EC;
+}
+
+.dash-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: 'Sora', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: #101828;
+  padding-left: 16px;
+}
+
+.dash-brand-glyph {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--brand);
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.dash-brand-glyph::after {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border-radius: 50%;
+  background: white;
+}
+
+.dash-back-btn {
+  background: transparent;
+  border: 1.5px solid #D0D5DD;
+  color: #344054;
+  padding: 7px 16px;
+  border-radius: 8px;
+  font-family: 'Sora', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-right: 16px;
+  transition: border-color 150ms ease, color 150ms ease;
+}
+
+.dash-back-btn:hover {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+
+.hero {
+  margin-top: 0;
+  border-radius: 0 0 28px 28px;
+}
