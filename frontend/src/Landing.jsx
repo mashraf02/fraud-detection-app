@@ -1,6 +1,73 @@
+import { useEffect, useRef, useState } from 'react'
 import './Landing.css'
 
+function AnimatedStat({ target, decimals = 0, suffix = '', label }) {
+  const [value, setValue] = useState(0)
+  const ref = useRef(null)
+  const hasRun = useRef(false)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && !hasRun.current) {
+            hasRun.current = true
+            const duration = 1200
+            const start = performance.now()
+
+            function tick(now) {
+              const progress = Math.min((now - start) / duration, 1)
+              const eased = 1 - Math.pow(1 - progress, 3)
+              setValue(target * eased)
+              if (progress < 1) {
+                requestAnimationFrame(tick)
+              }
+            }
+            requestAnimationFrame(tick)
+            observer.unobserve(el)
+          }
+        })
+      },
+      { threshold: 0.4 }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [target])
+
+  const display =
+    decimals > 0
+      ? value.toFixed(decimals)
+      : Math.round(value).toLocaleString()
+
+  return (
+    <div className="stat" ref={ref}>
+      <div className="stat-value">{display}{suffix}</div>
+      <div className="stat-label">{label}</div>
+    </div>
+  )
+}
+
 export default function Landing({ onLaunch }) {
+  useEffect(() => {
+    const sections = document.querySelectorAll('.landing .section')
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-visible')
+            observer.unobserve(entry.target)
+          }
+        })
+      },
+      { threshold: 0.15 }
+    )
+    sections.forEach((el) => observer.observe(el))
+    return () => observer.disconnect()
+  }, [])
+
   return (
     <div className="landing">
 
@@ -85,22 +152,10 @@ export default function Landing({ onLaunch }) {
 
       <section className="stats">
         <div className="stats-row shell">
-          <div className="stat">
-            <div className="stat-value">284,807</div>
-            <div className="stat-label">transactions in the benchmark set</div>
-          </div>
-          <div className="stat">
-            <div className="stat-value">492</div>
-            <div className="stat-label">of those were fraudulent</div>
-          </div>
-          <div className="stat">
-            <div className="stat-value">0.17%</div>
-            <div className="stat-label">overall fraud rate</div>
-          </div>
-          <div className="stat">
-            <div className="stat-value">30</div>
-            <div className="stat-label">features the model reads</div>
-          </div>
+          <AnimatedStat target={284807} label="transactions in the benchmark set" />
+          <AnimatedStat target={492} label="of those were fraudulent" />
+          <AnimatedStat target={0.17} decimals={2} suffix="%" label="overall fraud rate" />
+          <AnimatedStat target={30} label="features the model reads" />
         </div>
       </section>
 

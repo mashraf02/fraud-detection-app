@@ -925,3 +925,64 @@
     row-gap: 32px;
   }
 }
+
+/* Hover lift for cards (motion track) */
+
+.landing .pipeline-step,
+.landing .mode,
+.landing .model-diagram,
+.landing .result,
+.landing .limit,
+.landing .score-card {
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.landing .pipeline-step:hover,
+.landing .mode:hover,
+.landing .model-diagram:hover,
+.landing .result:hover,
+.landing .limit:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px rgba(16, 24, 40, 0.1);
+}
+
+.landing .roadmap-item {
+  transition: background 180ms ease;
+}
+
+.landing .roadmap-item:hover {
+  background: var(--bg-tint);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing .pipeline-step,
+  .landing .mode,
+  .landing .model-diagram,
+  .landing .result,
+  .landing .limit,
+  .landing .score-card,
+  .landing .roadmap-item {
+    transition: none;
+  }
+}
+
+/* Scroll fade-in reveal (motion track) */
+
+.landing .section {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 600ms ease, transform 600ms ease;
+}
+
+.landing .section.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing .section {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
