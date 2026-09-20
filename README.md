@@ -388,4 +388,4 @@ training.
 
 ## License
 
-MIT.
+N/A
