@@ -1,42 +1,22 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import Papa from 'papaparse'
 import Landing from './Landing'
+import { predictBatch, predictTransaction } from './api'
+import { useModel, zeroVector } from './useModel'
 import './App.css'
 
-const FIELD_NAMES = ['Time', 'Amount', ...Array.from({ length: 28 }, (_, i) => `V${i + 1}`)]
-const PRIMARY_FIELDS = ['Time', 'Amount']
-const TECHNICAL_FIELDS = FIELD_NAMES.filter((n) => !PRIMARY_FIELDS.includes(n))
+// Nothing about the model is hardcoded in this console. The inspector renders
+// whatever feature list `GET /model` declares, so the same UI drives a different
+// model — or a different domain — without a frontend change. There are
+// deliberately no baked-in sample vectors either: a preset that only makes sense
+// for one dataset is a liability in a general product, so the only shortcuts
+// left are schema-derived (the zero vector) or the user's own last submission.
 
-const DEFAULT_VALUES = {
-  Time: 406, Amount: 0,
-  V1: -2.3122265423263, V2: 1.95199201064158, V3: -1.60985073229769,
-  V4: 3.9979055875468, V5: -0.522187864667764, V6: -1.42654531920595,
-  V7: -2.53738730624579, V8: 1.39165724829804, V9: -2.77008927719433,
-  V10: -2.77227214465915, V11: 3.20203320709635, V12: -2.89990738849473,
-  V13: -0.595221881324605, V14: -4.28925378244217, V15: 0.389724120274487,
-  V16: -1.14074717980657, V17: -2.83005567450437, V18: -0.0168224681808257,
-  V19: 0.416955705037907, V20: 0.126910559061474, V21: 0.517232370861764,
-  V22: -0.0350493686052974, V23: -0.465211076182388, V24: 0.320198198514526,
-  V25: 0.0445191674731724, V26: 0.177839798284401, V27: 0.261145002567677,
-  V28: -0.143275874698919,
-}
-
-const LEGIT_SAMPLE_VALUES = {
-  Time: 1204, Amount: 38.50,
-  V1: 0.1211, V2: -0.0524, V3: 0.2241, V4: -0.1582, V5: 0.0814, V6: -0.0219,
-  V7: 0.1145, V8: -0.0432, V9: 0.0618, V10: -0.0812, V11: 0.1423, V12: -0.0312,
-  V13: 0.0519, V14: 0.0214, V15: -0.1245, V16: 0.0912, V17: -0.0184, V18: 0.0421,
-  V19: -0.0612, V20: 0.0142, V21: -0.0215, V22: 0.0512, V23: -0.0142, V24: 0.0315,
-  V25: -0.0418, V26: 0.0214, V27: -0.0112, V28: 0.0105,
-}
-
-const API_BASE = 'http://localhost:8000'
-
-function VerdictBadge({ isFraud }) {
+function VerdictBadge({ isFlagged }) {
   return (
-    <span className={`dash-badge ${isFraud ? 'dash-badge-fraud' : 'dash-badge-legit'}`}>
+    <span className={`dash-badge ${isFlagged ? 'dash-badge-fraud' : 'dash-badge-legit'}`}>
       <span className="badge-dot" />
-      <span>{isFraud ? 'FRAUD' : 'LEGIT'}</span>
+      <span>{isFlagged ? 'FLAGGED' : 'CLEARED'}</span>
     </span>
   )
 }
@@ -48,7 +28,9 @@ function Spinner() {
 function App() {
   const [showLanding, setShowLanding] = useState(true)
   const [tab, setTab] = useState('single')
-  const [fields, setFields] = useState(DEFAULT_VALUES)
+  const [edits, setEdits] = useState({})
+  const [lastScored, setLastScored] = useState(null)
+  const [featureFilter, setFeatureFilter] = useState('')
   const [result, setResult] = useState(null)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -59,13 +41,41 @@ function App() {
   const [batchLoading, setBatchLoading] = useState(false)
   const [fileName, setFileName] = useState(null)
 
-  const sessionChecks = history.length + (batchResults ? batchResults.total : 0)
-  const sessionFraud = history.filter((h) => h.is_fraud).length + (batchResults ? batchResults.fraud_count : 0)
+  // Batch totals accumulate across uploads. Summing only the most recent batch
+  // silently dropped every earlier upload from the session figures.
+  const [batchTotals, setBatchTotals] = useState({ total: 0, fraud: 0 })
+
+  // The deployment declares its own interface; the console follows it.
+  const { status: modelStatus, model: modelInfo, error: modelError, features } = useModel()
+
+  // The form is derived rather than seeded in an effect: the zero vector for
+  // whatever schema arrives is the base value and edits layer on top, so a
+  // schema change can never leave stale values from a previous model behind. If
+  // the interface cannot be read, the field list is genuinely empty and the
+  // inspector says so instead of guessing a schema to score against.
+  const baseline = useMemo(() => zeroVector(features), [features])
+  const fields = useMemo(() => ({ ...baseline, ...edits }), [baseline, edits])
+
+  const visibleFeatures = useMemo(() => {
+    const needle = featureFilter.trim().toLowerCase()
+    if (!needle) return features
+    return features.filter((name) => name.toLowerCase().includes(needle))
+  }, [features, featureFilter])
+
+  const sessionChecks = history.length + batchTotals.total
+  const sessionFraud = history.filter((h) => h.is_fraud).length + batchTotals.fraud
   const sessionLegit = sessionChecks - sessionFraud
   const fraudPercentage = sessionChecks > 0 ? ((sessionFraud / sessionChecks) * 100).toFixed(1) : '0.0'
 
+  // Decisioning facts read from the API at runtime. Nothing here is a literal
+  // that can drift away from the deployed model.
+  const operatingPoint = modelInfo?.metrics?.operating_point ?? null
+  const asPercent = (value) => (value == null ? '—' : `${(value * 100).toFixed(1)}%`)
+  const cutOffText =
+    modelInfo == null ? null : Number(modelInfo.effective_threshold).toFixed(2)
+
   function updateField(name, value) {
-    setFields((prev) => ({ ...prev, [name]: value }))
+    setEdits((prev) => ({ ...prev, [name]: value }))
   }
 
   async function checkSingle() {
@@ -74,7 +84,7 @@ function App() {
     setLoading(true)
 
     const payload = {}
-    for (const name of FIELD_NAMES) {
+    for (const name of features) {
       const num = parseFloat(fields[name])
       if (Number.isNaN(num)) {
         setError(`"${name}" is not a valid number.`)
@@ -85,17 +95,14 @@ function App() {
     }
 
     try {
-      const res = await fetch(`${API_BASE}/predict`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-      if (!res.ok) throw new Error(`API returned ${res.status}`)
-      const data = await res.json()
+      const data = await predictTransaction(payload)
       setResult(data)
+      setLastScored(payload)
       setHistory((prev) => [
         {
-          id: `TXN-${Math.floor(10000 + Math.random() * 90000)}`,
+          // The API assigns the id and it is the same id the audit trail uses,
+          // so the console no longer invents a display-only one.
+          id: data.transaction_id,
           time: new Date().toLocaleTimeString(),
           amount: payload.Amount,
           ...data,
@@ -122,22 +129,55 @@ function App() {
       skipEmptyLines: true,
       complete: async (parsed) => {
         try {
+          // Validate before uploading. A missing column or an empty cell used to
+          // reach the API and come back as a 422 that named no row at all.
+          const problems = []
+          for (
+            let index = 0;
+            index < parsed.data.length && problems.length < 5;
+            index += 1
+          ) {
+            const row = parsed.data[index]
+            for (const name of features) {
+              const value = row[name]
+              if (
+                value === undefined ||
+                value === null ||
+                value === '' ||
+                Number.isNaN(Number(value))
+              ) {
+                problems.push(
+                  `row ${index + 2}: ${name} is ${
+                    value === undefined ? 'missing' : `"${value}"`
+                  }`,
+                )
+                break
+              }
+            }
+          }
+
+          if (problems.length > 0) {
+            setBatchError(
+              `CSV rejected before upload — ${problems.join('; ')}. Expected the ${features.length} features this model declares, all numeric.`,
+            )
+            setBatchLoading(false)
+            return
+          }
+
           const rows = parsed.data.map((row) => {
             const clean = {}
-            for (const name of FIELD_NAMES) {
-              clean[name] = row[name]
+            for (const name of features) {
+              clean[name] = Number(row[name])
             }
             return clean
           })
 
-          const res = await fetch(`${API_BASE}/predict/batch`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(rows),
-          })
-          if (!res.ok) throw new Error(`API returned ${res.status}`)
-          const data = await res.json()
+          const data = await predictBatch(rows)
           setBatchResults(data)
+          setBatchTotals((current) => ({
+            total: current.total + data.total,
+            fraud: current.fraud + data.fraud_count,
+          }))
         } catch (err) {
           setBatchError(err.message)
         } finally {
@@ -194,7 +234,13 @@ function App() {
           <div className="dash-nav-right">
             <div className="dash-telemetry-pill">
               <span className="telemetry-dot" />
-              <span className="telemetry-text">Model Online &bull; &lt;15ms</span>
+              <span className="telemetry-text">
+                {modelInfo
+                  ? `Model loaded \u00b7 cut-off ${cutOffText}`
+                  : modelError
+                    ? 'Model unreachable'
+                    : 'Loading model\u2026'}
+              </span>
             </div>
             <button className="dash-back-btn" onClick={() => setShowLanding(true)}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -211,12 +257,27 @@ function App() {
         <section className="dash-hero">
           <div className="dash-hero-badge">
             <span className="dash-sparkle">✦</span>
-            <span>Real-Time ML Decision Engine</span>
+            <span>Model-agnostic decision console</span>
           </div>
-          <h1 className="dash-hero-title">Live Fraud Screening Console</h1>
+          <h1 className="dash-hero-title">Live Risk Decisioning Console</h1>
           <p className="dash-hero-desc">
-            Test single edge-case transactions with 30-feature vector inputs or run high-throughput batch CSV evaluations against calibrated decision thresholds.
+            {features.length > 0
+              ? `Score one row against the ${features.length}-feature interface this deployment declares, or screen a whole CSV through the same vectorised path.`
+              : 'Score a single row or screen a whole CSV once the model interface has been read.'}
           </p>
+          {modelInfo && (
+            <p className="dash-hero-desc">
+              Deployed model <strong>{modelInfo.version}</strong>
+              {operatingPoint
+                ? ` — held-out recall ${asPercent(operatingPoint.recall)} at ${asPercent(operatingPoint.precision)} precision, decision cut-off ${cutOffText} (source: ${modelInfo.threshold_source.replace(/_/g, ' ')}).`
+                : `.`}
+            </p>
+          )}
+          {modelError && (
+            <p className="dash-hero-desc">
+              Model metadata unavailable ({modelError}). Scoring below still goes to the live API; only the reported cut-off is missing.
+            </p>
+          )}
         </section>
 
         {/* Live Session Telemetry Stats */}
@@ -230,21 +291,21 @@ function App() {
 
           <div className="dash-stat-tile stat-fraud">
             <div className="stat-glow" />
-            <span className="stat-label">FLAGGED FRAUD</span>
+            <span className="stat-label">FLAGGED</span>
             <div className="stat-value text-fraud">{sessionFraud.toLocaleString()}</div>
-            <span className="stat-sub">Triggered review cutoff</span>
+            <span className="stat-sub">Over the cut-off</span>
           </div>
 
           <div className="dash-stat-tile stat-legit">
             <div className="stat-glow" />
-            <span className="stat-label">VERIFIED LEGIT</span>
+            <span className="stat-label">CLEARED</span>
             <div className="stat-value text-legit">{sessionLegit.toLocaleString()}</div>
-            <span className="stat-sub">Normal behavioral range</span>
+            <span className="stat-sub">Under the cut-off</span>
           </div>
 
           <div className="dash-stat-tile stat-rate">
             <div className="stat-glow" />
-            <span className="stat-label">SESSION FRAUD RATE</span>
+            <span className="stat-label">SESSION FLAG RATE</span>
             <div className="stat-value text-cyan">{fraudPercentage}%</div>
             <span className="stat-sub">Flagged ratio</span>
           </div>
@@ -260,7 +321,7 @@ function App() {
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
                 <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
               </svg>
-              <span>Single Transaction Check</span>
+              <span>Single row check</span>
             </button>
             <button
               className={`dash-tab ${tab === 'batch' ? 'is-active' : ''}`}
@@ -272,7 +333,7 @@ function App() {
                 <line x1="16" y1="13" x2="8" y2="13"/>
                 <line x1="16" y1="17" x2="8" y2="17"/>
               </svg>
-              <span>Batch CSV Screener</span>
+              <span>Batch CSV</span>
             </button>
           </div>
         </div>
@@ -282,82 +343,82 @@ function App() {
           <div className="dash-card">
             <div className="card-header-bar">
               <div>
-                <h2 className="card-heading">Single Transaction Inspector</h2>
+                <h2 className="card-heading">Single Row Inspector</h2>
                 <p className="card-subhead">
-                  Specify transaction features to compute probability and decision classification.
+                  Enter every feature this model declares. The response carries the probability, the cut-off that was applied and the measured latency.
                 </p>
               </div>
 
-              {/* Presets */}
+              {/* The only shortcuts offered are derived from the schema itself
+                  (a zero vector is the mean row after standardisation) or from
+                  the user's own input. Nothing dataset-specific is baked in. */}
               <div className="preset-group">
                 <span className="preset-title">Presets:</span>
                 <button
                   type="button"
-                  className="preset-btn preset-danger"
-                  onClick={() => setFields(DEFAULT_VALUES)}
+                  className="preset-btn preset-safe"
+                  onClick={() => setEdits({})}
+                  disabled={features.length === 0}
                 >
-                  <span className="dot-red" />
-                  Load Known Fraud Pattern
+                  <span className="dot-green" />
+                  Zero vector (mean row)
                 </button>
                 <button
                   type="button"
-                  className="preset-btn preset-safe"
-                  onClick={() => setFields(LEGIT_SAMPLE_VALUES)}
+                  className="preset-btn preset-danger"
+                  onClick={() => setEdits(lastScored)}
+                  disabled={!lastScored}
                 >
-                  <span className="dot-green" />
-                  Load Normal Purchase
+                  <span className="dot-red" />
+                  Reload last scored vector
                 </button>
               </div>
             </div>
 
-            {/* Primary Fields */}
-            <div className="dash-field-box">
-              <div className="field-box-title">
-                <span>Core Transaction Details</span>
-                <span className="field-box-note">Direct merchant payload</span>
+            {modelStatus !== 'ready' ? (
+              <div className="dash-banner banner-loading">
+                <Spinner />
+                <span>
+                  {modelStatus === 'error'
+                    ? `The model interface could not be read (${modelError}). This inspector needs GET /model to know which features to collect, and it will not guess.`
+                    : 'Reading the model interface…'}
+                </span>
               </div>
-              <div className="dash-grid-primary">
-                {PRIMARY_FIELDS.map((name) => (
-                  <div key={name} className="dash-input-group">
-                    <label htmlFor={`field-${name}`} className="dash-label">
-                      <span>{name}</span>
-                      <span className="label-sub">{name === 'Time' ? '(Seconds from epoch)' : '(USD Amount)'}</span>
-                    </label>
-                    <input
-                      id={`field-${name}`}
-                      type="number"
-                      step="any"
-                      value={fields[name]}
-                      onChange={(e) => updateField(name, e.target.value)}
-                      className="dash-input primary-input"
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
+            ) : (
+              <div className="dash-field-box">
+                <div className="field-box-title">
+                  <span>Features declared by the model ({features.length})</span>
+                  <span className="field-box-note">Names and order come from GET /model</span>
+                </div>
 
-            {/* Technical PCA Features */}
-            <div className="dash-field-box">
-              <div className="field-box-title">
-                <span>Technical PCA Behavioral Features (V1 &ndash; V28)</span>
-                <span className="field-box-note">Standardized behavioral projections</span>
+                {features.length > 12 && (
+                  <input
+                    type="search"
+                    value={featureFilter}
+                    onChange={(event) => setFeatureFilter(event.target.value)}
+                    placeholder={`Filter ${features.length} features by name`}
+                    aria-label="Filter features by name"
+                    className="dash-input"
+                  />
+                )}
+
+                <div className="dash-grid-technical">
+                  {visibleFeatures.map((name) => (
+                    <div key={name} className="dash-input-group technical-item">
+                      <label htmlFor={`field-${name}`} className="dash-label-mono">{name}</label>
+                      <input
+                        id={`field-${name}`}
+                        type="number"
+                        step="any"
+                        value={fields[name] ?? ''}
+                        onChange={(e) => updateField(name, e.target.value)}
+                        className="dash-input mono-input"
+                      />
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div className="dash-grid-technical">
-                {TECHNICAL_FIELDS.map((name) => (
-                  <div key={name} className="dash-input-group technical-item">
-                    <label htmlFor={`field-${name}`} className="dash-label-mono">{name}</label>
-                    <input
-                      id={`field-${name}`}
-                      type="number"
-                      step="any"
-                      value={fields[name]}
-                      onChange={(e) => updateField(name, e.target.value)}
-                      className="dash-input mono-input"
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
+            )}
 
             {/* Submit Action */}
             <div className="action-row">
@@ -369,7 +430,7 @@ function App() {
                 {loading ? (
                   <>
                     <Spinner />
-                    <span>Evaluating Telemetry...</span>
+                    <span>Scoring…</span>
                   </>
                 ) : (
                   <>
@@ -377,7 +438,7 @@ function App() {
                       <circle cx="12" cy="12" r="10"/>
                       <polygon points="10 8 16 12 10 16 10 8"/>
                     </svg>
-                    <span>Run Fraud Assessment</span>
+                    <span>Score this row</span>
                   </>
                 )}
               </button>
@@ -401,14 +462,14 @@ function App() {
                 <div className="result-header">
                   <div className="result-verdict-wrap">
                     <span className="result-badge">
-                      {result.is_fraud ? 'HIGH RISK DETECTED' : 'LOW RISK VERIFIED'}
+                      {result.is_fraud ? 'OVER THE CUT-OFF' : 'UNDER THE CUT-OFF'}
                     </span>
                     <h3 className="result-title">
-                      {result.is_fraud ? 'Flagged for Human Review' : 'Transaction Approved as Normal'}
+                      {result.is_fraud ? 'Flagged for human review' : 'No review required'}
                     </h3>
                   </div>
                   <div className="result-score-block">
-                    <span className="score-heading">FRAUD PROBABILITY</span>
+                    <span className="score-heading">RISK PROBABILITY</span>
                     <div className="score-huge">
                       {(result.fraud_probability * 100).toFixed(1)}%
                     </div>
@@ -422,16 +483,25 @@ function App() {
                       style={{ width: `${result.fraud_probability * 100}%` }}
                     />
                   </div>
+                  {/* The cut-off is deliberately not drawn on this meter: the old
+                      label sat at the midpoint and claimed 0.50 while the model
+                      was scoring against a different threshold. */}
                   <div className="meter-labels">
                     <span>0.00 (Safe)</span>
-                    <span>0.50 (Decision Cutoff)</span>
                     <span>1.00 (Severe)</span>
                   </div>
                 </div>
 
                 <div className="result-footer-meta">
-                  <span>Processed locally in &lt;15ms</span>
-                  <span>Model: StandardScaler + Logistic Regression (Balanced)</span>
+                  <span>Scored in {Number(result.latency_ms).toFixed(1)} ms</span>
+                  <span>
+                    Model: {result.model_version} &middot; cut-off{' '}
+                    {Number(result.threshold).toFixed(2)}
+                  </span>
+                  <span>
+                    Transaction {String(result.transaction_id).slice(0, 12)}
+                    {result.review_required ? ' queued for review' : ' cleared'}
+                  </span>
                 </div>
               </div>
             )}
@@ -453,24 +523,32 @@ function App() {
                   <table className="dash-table">
                     <thead>
                       <tr>
-                        <th>ID</th>
+                        <th>Transaction</th>
                         <th>Time Checked</th>
                         <th>Amount</th>
                         <th>Verdict</th>
                         <th>Risk Probability</th>
+                        <th>Model Time</th>
                       </tr>
                     </thead>
                     <tbody>
                       {history.map((h, i) => (
                         <tr key={i} className={h.is_fraud ? 'row-fraud' : 'row-legit'}>
-                          <td className="font-mono text-cyan">{h.id}</td>
+                          <td className="font-mono text-cyan" title={h.id}>
+                            {String(h.id).slice(0, 12)}
+                          </td>
                           <td className="font-mono text-muted">{h.time}</td>
-                          <td className="font-mono font-bold">${typeof h.amount === 'number' ? h.amount.toFixed(2) : h.amount}</td>
-                          <td><VerdictBadge isFraud={h.is_fraud} /></td>
+                          <td className="font-mono font-bold">
+                            {typeof h.amount === 'number' ? `$${h.amount.toFixed(2)}` : '—'}
+                          </td>
+                          <td><VerdictBadge isFlagged={h.is_fraud} /></td>
                           <td className="font-mono font-bold">
                             <span className={h.is_fraud ? 'text-fraud' : 'text-legit'}>
                               {(h.fraud_probability * 100).toFixed(1)}%
                             </span>
+                          </td>
+                          <td className="font-mono text-muted">
+                            {Number(h.latency_ms).toFixed(1)} ms
                           </td>
                         </tr>
                       ))}
@@ -487,15 +565,25 @@ function App() {
           <div className="dash-card">
             <div className="card-header-bar">
               <div>
-                <h2 className="card-heading">High-Throughput Batch CSV Screening</h2>
+                <h2 className="card-heading">Batch CSV Screening</h2>
                 <p className="card-subhead">
-                  Screen entire datasets containing thousands of transactions in a single vectorized inference cycle.
+                  Screen a file of rows in a single vectorised inference pass. Rows are validated against the declared schema before anything is sent.
                 </p>
               </div>
             </div>
 
             <p className="batch-format-hint">
-              <strong>Expected Schema:</strong> Header row must contain <code>Time</code>, <code>Amount</code>, and <code>V1</code> through <code>V28</code> columns.
+              <strong>Expected schema:</strong>{' '}
+              {features.length > 0 ? (
+                <>
+                  the header row must contain the {features.length} features this model
+                  declares — <code>{features.slice(0, 4).join(', ')}</code>
+                  {features.length > 4 ? `, … ${features.length} in total` : ''} — all
+                  numeric.
+                </>
+              ) : (
+                'waiting for GET /model to declare the expected columns.'
+              )}
             </p>
 
             <label
@@ -565,7 +653,18 @@ function App() {
                     <span>Flagged Ratio</span>
                     <strong>{((batchResults.fraud_count / batchResults.total) * 100).toFixed(2)}%</strong>
                   </div>
+                  <div className="summary-pill rate">
+                    <span>Model Time</span>
+                    <strong>{Number(batchResults.latency_ms).toFixed(1)} ms</strong>
+                  </div>
                 </div>
+
+                <p className="batch-format-hint">
+                  Scored with <strong>{batchResults.model_version}</strong> at cut-off{' '}
+                  {Number(batchResults.threshold).toFixed(2)} —{' '}
+                  {(Number(batchResults.latency_ms) / Math.max(batchResults.total, 1) * 1000).toFixed(0)}
+                  {' '}µs per row across {batchResults.total.toLocaleString()} rows.
+                </p>
 
                 <div className="dash-table-wrapper">
                   <table className="dash-table">
@@ -581,8 +680,10 @@ function App() {
                       {batchResults.results.slice(0, 50).map((r, i) => (
                         <tr key={i} className={r.is_fraud ? 'row-fraud' : 'row-legit'}>
                           <td className="font-mono text-muted">{i + 1}</td>
-                          <td className="font-mono font-bold">${typeof r.Amount === 'number' ? r.Amount.toFixed(2) : r.Amount}</td>
-                          <td><VerdictBadge isFraud={r.is_fraud} /></td>
+                          <td className="font-mono font-bold">
+                            {typeof r.Amount === 'number' ? `$${r.Amount.toFixed(2)}` : '—'}
+                          </td>
+                          <td><VerdictBadge isFlagged={r.is_fraud} /></td>
                           <td className="font-mono font-bold">
                             <span className={r.is_fraud ? 'text-fraud' : 'text-legit'}>
                               {(r.fraud_probability * 100).toFixed(1)}%

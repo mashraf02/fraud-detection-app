@@ -1,0 +1,42 @@
+[project]
+name = "fraud-radar"
+version = "1.0.0"
+description = "Credit card fraud scoring service with a human review workflow"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# Makes `backend.*` and `model.train` importable without installing the project.
+pythonpath = ["."]
+addopts = "-q --strict-markers"
+markers = [
+    "dataset: requires the full Kaggle dataset in data/creditcard.csv",
+]
+# Only third-party deprecations from the installed Starlette are silenced; our
+# own warnings stay visible so they get fixed rather than hidden.
+filterwarnings = [
+    "ignore::DeprecationWarning:starlette.*",
+    "ignore::DeprecationWarning:fastapi.*",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "C4", "SIM", "N"]
+ignore = [
+    # Long log/Field strings are clearer unwrapped in a few places.
+    "E501",
+]
+
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI declares dependencies and query parameters as argument defaults by
+# design, which B008 would otherwise flag on every endpoint.
+extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.Query",
+    "fastapi.Header",
+    "fastapi.Body",
+    "fastapi.Path",
+]

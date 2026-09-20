@@ -1,0 +1,79 @@
+{
+  "version": "logreg-20260920T065606Z",
+  "model_name": "logreg",
+  "trained_at": "2026-09-20T06:56:06.360191+00:00",
+  "dataset": {
+    "path": "data\\creditcard.csv",
+    "sha256": "76274b691b16a6c49d3f159c883398e03ccd6d1ee12d9d8ee38f4b4b98551a89",
+    "rows": 284807,
+    "fraud_rows": 492
+  },
+  "training": {
+    "test_size": 0.2,
+    "seed": 42,
+    "max_iter": 1000,
+    "class_weight": "balanced",
+    "calibration": "sigmoid",
+    "scaled_features": [
+      "Time",
+      "Amount"
+    ],
+    "scaler_fit_on": "train_split_only",
+    "threshold_strategy": "best_f1",
+    "target_recall": null,
+    "threshold_grid": [
+      0.01,
+      0.99,
+      99
+    ],
+    "feature_count": 30
+  },
+  "recommended_threshold": 0.06,
+  "metrics": {
+    "roc_auc": 0.969845,
+    "pr_auc": 0.746721,
+    "pr_auc_baseline": 0.00172,
+    "brier_score": 0.000694,
+    "expected_calibration_error": 0.000635,
+    "mean_predicted_probability": 0.001848,
+    "actual_prevalence": 0.00172,
+    "probabilities_calibrated": true,
+    "test_rows": 56962,
+    "test_fraud_rows": 98,
+    "operating_point": {
+      "threshold": 0.06,
+      "precision": 0.824742,
+      "recall": 0.816327,
+      "f1": 0.820513,
+      "confusion_matrix": {
+        "true_negative": 56847,
+        "false_positive": 17,
+        "false_negative": 18,
+        "true_positive": 80
+      }
+    },
+    "at_default_threshold": {
+      "threshold": 0.5,
+      "precision": 0.837838,
+      "recall": 0.632653,
+      "f1": 0.72093,
+      "confusion_matrix": {
+        "true_negative": 56852,
+        "false_positive": 12,
+        "false_negative": 36,
+        "true_positive": 62
+      }
+    }
+  },
+  "runtime": {
+    "python": "3.14.7",
+    "scikit_learn": "1.9.1",
+    "pandas": "3.0.5",
+    "numpy": "2.5.3"
+  },
+  "artifact_sha256": {
+    "fraud_model.pkl": "69dbbd6ea547148aadd8dd37c575863e41a58eb2966ea582e0f9fa65fe68f812",
+    "feature_order.pkl": "5f4263a3ed724e33ab305503fd0b2e41b65af6492bbda4197b17307f081f921f",
+    "scaler.pkl": "a6d960c073c8ee8c43ec8fd8a8dee5322e1400e4e09a3e1d7a957194857a3419"
+  }
+}

@@ -35,6 +35,24 @@
   --max-content-width: 1240px;
 }
 
+/* Bangla typography — 'Hind Siliguri' is preloaded in index.html. The language
+   switcher sets <html lang="bn">, which flips these font stacks. */
+html[lang='bn'] {
+  --font-display: 'Hind Siliguri', 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-body: 'Hind Siliguri', 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Hind Siliguri', monospace;
+}
+
+/* Bangla has taller ascenders/descenders than Latin, so body copy needs more leading. */
+html[lang='bn'] p,
+html[lang='bn'] .scenario-desc,
+html[lang='bn'] .step-body,
+html[lang='bn'] .mode-desc,
+html[lang='bn'] .enterprise-body,
+html[lang='bn'] .footer-tagline {
+  line-height: 1.7;
+}
+
 /* Global Reset for Landing */
 .landing {
   min-height: 100vh;
@@ -286,6 +304,47 @@
   font-weight: 600;
   color: var(--color-emerald-safe);
   font-family: var(--font-mono);
+}
+
+/* Language switcher (English / বাংলা) */
+.lang-toggle {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px;
+  border-radius: 100px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--color-border-subtle);
+}
+
+.lang-option {
+  min-width: 38px;
+  padding: 5px 10px;
+  border: none;
+  border-radius: 100px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+
+.lang-option:hover {
+  color: var(--color-text-primary);
+}
+
+.lang-option.is-active {
+  color: #FFFFFF;
+  background: linear-gradient(135deg, #4F46E5 0%, #06B6D4 100%);
+  box-shadow: 0 2px 12px rgba(99, 102, 241, 0.45);
+}
+
+.lang-option:focus-visible {
+  outline: 2px solid var(--color-accent-cyan-light);
+  outline-offset: 2px;
 }
 
 .nav-github-btn {
@@ -1908,16 +1967,65 @@
 }
 
 @media (max-width: 768px) {
+  /* Let the bar wrap instead of clipping when brand + controls crowd together. */
   .landing-nav {
-    height: 70px;
+    height: auto;
+    min-height: 70px;
+    padding: 10px 0;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 10px 12px;
+  }
+
+  .nav-right {
+    /* Keeps the controls right-aligned whether they sit on row 1 or wrap to row 2. */
+    margin-left: auto;
+    gap: 10px;
+  }
+
+  .brand-title {
+    font-size: 16px;
+    white-space: nowrap;
+  }
+
+  .brand-subtitle {
+    font-size: 9px;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+  }
+
+  .nav-github-btn {
+    padding: 8px 10px;
+  }
+
+  /* Icon-only GitHub link so the language switch keeps its room. */
+  .nav-github-btn span {
+    display: none;
+  }
+
+  .landing-nav .btn-glow-primary {
+    padding: 9px 14px;
+    font-size: 13px;
+    white-space: nowrap;
   }
 
   .nav-links {
     display: none;
   }
 
+  /* Telemetry pill hides on small screens; keep the language switch reachable. */
   .telemetry-pill {
     display: none;
+  }
+
+  .lang-toggle {
+    padding: 2px;
+  }
+
+  .lang-option {
+    min-width: 32px;
+    padding: 4px 7px;
+    font-size: 11px;
   }
 
   .hero-headline {
@@ -1971,5 +2079,124 @@
     flex-direction: column;
     gap: 12px;
     text-align: center;
+  }
+}
+
+/* ==========================================================================
+   LIVE-DATA STATES
+   The page renders real API responses, so it needs a visible state for
+   "waiting" and "unreachable" instead of a placeholder number, plus cleared
+   variants of the score and status pills — the original design only ever
+   rendered a flagged transaction, so only the alert colours existed.
+   ========================================================================== */
+
+.stats-caption {
+  margin-top: 22px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  color: var(--color-text-muted);
+}
+
+.mode-note {
+  margin-top: 12px;
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--color-text-muted);
+}
+
+.score-pill.score-low {
+  background: var(--color-emerald-bg);
+}
+
+.score-pill.score-low .score-num,
+.score-pill.score-low .score-desc {
+  color: var(--color-emerald-safe);
+}
+
+.status-pill.status-ok {
+  color: #6EE7B7;
+  font-weight: 600;
+}
+
+.console-notice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.console-notice-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-amber-review);
+  flex-shrink: 0;
+  animation: console-notice-pulse 1.5s ease-in-out infinite;
+}
+
+.console-notice-error {
+  color: #FDA4AF;
+}
+
+.console-notice-error .console-notice-dot {
+  background: var(--color-crimson-alert);
+  animation: none;
+}
+
+.console-notice-body {
+  margin-top: 10px;
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--color-text-muted);
+}
+
+/* A model version string is long and must not sit under the action button. */
+.readout-action-bar {
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.readout-time-stamp {
+  overflow-wrap: anywhere;
+}
+
+/* Feature names rendered as chips. The count comes from the model, so the list
+   wraps instead of assuming a fixed number of columns. */
+.feature-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 16px 0;
+}
+
+.feature-chip {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--color-border-subtle);
+  color: var(--color-text-secondary);
+}
+
+.interface-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+@keyframes console-notice-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.3;
   }
 }

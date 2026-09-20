@@ -6,3 +6,20 @@ data/*.csv
 model/*.pkl
 .DS_Store
 sample_batch.csv
+
+# Local SQLite databases (the production path is Postgres)
+data/*.db
+
+# Tool caches
+.pytest_cache/
+.ruff_cache/
+frontend/dist/
+
+# Preview/thread logs; run.md is kept
+.freebuff/*.log
+.freebuff/*.log.err
+
+# Tooling scratch: run.md and check-keys.mjs stay tracked
+.freebuff/backup/
+.freebuff/scenarios.json
+.freebuff/project-id

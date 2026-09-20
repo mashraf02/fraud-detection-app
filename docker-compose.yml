@@ -1,0 +1,67 @@
+# Production-shaped stack: Postgres, the API (migrated before it serves) and
+# nginx serving the UI and proxying /api.
+#
+#   cp .env.example .env      # then set FRAUD_RADAR_API_KEYS
+#   docker compose up --build
+#
+#   API   http://localhost:8000   (OpenAPI docs at /docs)
+#   UI    http://localhost:8080
+
+name: fraud-radar
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: fraud
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+      POSTGRES_DB: fraud_radar
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fraud -d fraud_radar"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  api:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      FRAUD_RADAR_ENVIRONMENT: production
+      FRAUD_RADAR_DATABASE_URL: postgresql+psycopg://fraud:${POSTGRES_PASSWORD:-change-me}@db:5432/fraud_radar
+      # The `:?` form aborts the deploy instead of starting unauthenticated.
+      FRAUD_RADAR_API_KEYS: ${FRAUD_RADAR_API_KEYS:?set FRAUD_RADAR_API_KEYS in .env}
+      FRAUD_RADAR_CORS_ORIGINS: ${FRAUD_RADAR_CORS_ORIGINS:-http://localhost:8080}
+      FRAUD_RADAR_AUTO_CREATE_TABLES: "false"
+      FRAUD_RADAR_MODEL_DIR: /app/model
+      FRAUD_RADAR_LOG_LEVEL: INFO
+    volumes:
+      # Model artifacts are deployment data (retraining must not require an
+      # image rebuild), so they are mounted rather than baked in.
+      - ./model:/app/model:ro
+    # Migrations run before the server accepts traffic.
+    command:
+      - sh
+      - -c
+      - alembic upgrade head && uvicorn backend.main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: /api
+    depends_on:
+      - api
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+
+volumes:
+  db-data:
