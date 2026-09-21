@@ -228,9 +228,21 @@ export default function Landing({ onLaunch }) {
                 {model.status === 'ready' ? t('nav.telemetry') : t('nav.telemetryOffline')}
               </span>
             </div>
-            <button className="lang-toggle" onClick={toggleLanguage}>
-              {lang === 'en' ? 'বাংলা' : 'English'}
-            </button>
+            <div className="lang-switcher">
+              <button
+                className={`lang-btn ${lang === 'en' ? 'active' : ''}`}
+                onClick={() => lang !== 'en' && toggleLanguage()}
+              >
+                EN
+              </button>
+              <span className="lang-divider">|</span>
+              <button
+                className={`lang-btn ${lang === 'bn' ? 'active' : ''}`}
+                onClick={() => lang !== 'bn' && toggleLanguage()}
+              >
+                বাং
+              </button>
+            </div>
 
             <a
               href="https://github.com/mashraf02/fraud-detection-app"

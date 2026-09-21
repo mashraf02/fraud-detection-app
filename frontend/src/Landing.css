@@ -306,19 +306,19 @@ html[lang='bn'] .footer-tagline {
   font-family: var(--font-mono);
 }
 
-/* Language switcher (English / বাংলা) */
-.lang-toggle {
+/* Language switcher (EN | বাংলা) */
+.lang-switcher {
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: 2px;
   padding: 3px;
   border-radius: 100px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--color-border-subtle);
 }
 
-.lang-option {
-  min-width: 38px;
+.lang-btn {
+  min-width: 36px;
   padding: 5px 10px;
   border: none;
   border-radius: 100px;
@@ -332,19 +332,25 @@ html[lang='bn'] .footer-tagline {
   transition: color 160ms ease, background 160ms ease, box-shadow 160ms ease;
 }
 
-.lang-option:hover {
+.lang-btn:hover {
   color: var(--color-text-primary);
 }
 
-.lang-option.is-active {
+.lang-btn.active {
   color: #FFFFFF;
   background: linear-gradient(135deg, #4F46E5 0%, #06B6D4 100%);
   box-shadow: 0 2px 12px rgba(99, 102, 241, 0.45);
 }
 
-.lang-option:focus-visible {
+.lang-btn:focus-visible {
   outline: 2px solid var(--color-accent-cyan-light);
   outline-offset: 2px;
+}
+
+.lang-divider {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  user-select: none;
 }
 
 .nav-github-btn {
@@ -2018,11 +2024,11 @@ html[lang='bn'] .footer-tagline {
     display: none;
   }
 
-  .lang-toggle {
+  .lang-switcher {
     padding: 2px;
   }
 
-  .lang-option {
+  .lang-btn {
     min-width: 32px;
     padding: 4px 7px;
     font-size: 11px;
