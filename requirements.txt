@@ -72,3 +72,10 @@ watchfiles==1.2.0
 webencodings==0.6.1
 websockets==17.1
 xgboost==3.4.1
+
+
+
+# Language/FrameworkFile that keeps trackCommand to run on new device
+# React / Node.js   package.json       npm install
+# Python / NumPy    requirements.txt   pip install -r requirements.txt
+
